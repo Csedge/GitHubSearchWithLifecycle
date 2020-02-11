@@ -15,7 +15,9 @@
             android:name="com.example.android.githubsearchwithlifecycle.RepoDetailActivity"
             android:parentActivityName="com.example.android.githubsearchwithlifecycle.MainActivity">
         </activity>
-        <activity android:name="com.example.android.githubsearchwithlifecycle.MainActivity">
+        <activity
+            android:name="com.example.android.githubsearchwithlifecycle.MainActivity"
+            android:launchMode="singleTop">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

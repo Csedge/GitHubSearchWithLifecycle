@@ -1,5 +1,6 @@
 package com.example.android.githubsearchwithlifecycle;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -24,6 +25,7 @@ import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity implements GitHubSearchAdapter.OnSearchResultClickListener {
     private static final String TAG = MainActivity.class.getSimpleName();
+    private static final String SEARCH_RESULTS_KEY = "searchResults";
 
     private RecyclerView mSearchResultsRV;
     private EditText mSearchBoxET;
@@ -31,10 +33,14 @@ public class MainActivity extends AppCompatActivity implements GitHubSearchAdapt
     private TextView mErrorMessageTV;
     private GitHubSearchAdapter mGitHubSearchAdapter;
 
+    private ArrayList<GitHubRepo> mSearchResults;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        Log.d(TAG, "onCreate()");
 
         mSearchBoxET = findViewById(R.id.et_search_box);
         mSearchResultsRV = findViewById(R.id.rv_search_results);
@@ -48,6 +54,11 @@ public class MainActivity extends AppCompatActivity implements GitHubSearchAdapt
         mLoadingIndicatorPB = findViewById(R.id.pb_loading_indicator);
         mErrorMessageTV = findViewById(R.id.tv_error_message);
 
+        if (savedInstanceState != null && savedInstanceState.containsKey(SEARCH_RESULTS_KEY)) {
+            mSearchResults = (ArrayList)savedInstanceState.getSerializable(SEARCH_RESULTS_KEY);
+            mGitHubSearchAdapter.updateSearchResults(mSearchResults);
+        }
+
         Button searchButton = findViewById(R.id.btn_search);
         searchButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -58,6 +69,45 @@ public class MainActivity extends AppCompatActivity implements GitHubSearchAdapt
                 }
             }
         });
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        Log.d(TAG, "onStart()");
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Log.d(TAG, "onResume()");
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        Log.d(TAG, "onPause()");
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        Log.d(TAG, "onStop()");
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Log.d(TAG, "onDestroy()");
+    }
+
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        Log.d(TAG, "onSaveInstanceState()");
+        if (mSearchResults != null) {
+            outState.putSerializable(SEARCH_RESULTS_KEY, mSearchResults);
+        }
     }
 
     @Override
@@ -100,8 +150,8 @@ public class MainActivity extends AppCompatActivity implements GitHubSearchAdapt
             if (s != null) {
                 mErrorMessageTV.setVisibility(View.INVISIBLE);
                 mSearchResultsRV.setVisibility(View.VISIBLE);
-                ArrayList<GitHubRepo> searchResultsList = GitHubUtils.parseGitHubSearchResults(s);
-                mGitHubSearchAdapter.updateSearchResults(searchResultsList);
+                mSearchResults = GitHubUtils.parseGitHubSearchResults(s);
+                mGitHubSearchAdapter.updateSearchResults(mSearchResults);
             } else {
                 mErrorMessageTV.setVisibility(View.VISIBLE);
                 mSearchResultsRV.setVisibility(View.INVISIBLE);
