@@ -1,12 +1,12 @@
 package com.example.android.githubsearchwithlifecycle;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.content.Intent;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
@@ -17,15 +17,13 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.example.android.githubsearchwithlifecycle.data.GitHubRepo;
-import com.example.android.githubsearchwithlifecycle.utils.GitHubUtils;
-import com.example.android.githubsearchwithlifecycle.utils.NetworkUtils;
+import com.example.android.githubsearchwithlifecycle.data.Status;
 
-import java.io.IOException;
-import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements GitHubSearchAdapter.OnSearchResultClickListener {
     private static final String TAG = MainActivity.class.getSimpleName();
-    private static final String SEARCH_RESULTS_KEY = "searchResults";
+//    private static final String SEARCH_RESULTS_KEY = "searchResults";
 
     private RecyclerView mSearchResultsRV;
     private EditText mSearchBoxET;
@@ -33,7 +31,8 @@ public class MainActivity extends AppCompatActivity implements GitHubSearchAdapt
     private TextView mErrorMessageTV;
     private GitHubSearchAdapter mGitHubSearchAdapter;
 
-    private ArrayList<GitHubRepo> mSearchResults;
+    private GitHubSearchViewModel mViewModel;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,10 +53,37 @@ public class MainActivity extends AppCompatActivity implements GitHubSearchAdapt
         mLoadingIndicatorPB = findViewById(R.id.pb_loading_indicator);
         mErrorMessageTV = findViewById(R.id.tv_error_message);
 
-        if (savedInstanceState != null && savedInstanceState.containsKey(SEARCH_RESULTS_KEY)) {
-            mSearchResults = (ArrayList)savedInstanceState.getSerializable(SEARCH_RESULTS_KEY);
-            mGitHubSearchAdapter.updateSearchResults(mSearchResults);
-        }
+        mViewModel = new ViewModelProvider(this).get(GitHubSearchViewModel.class);
+
+        mViewModel.getSearchResults().observe(this, new Observer<List<GitHubRepo>>() {
+            @Override
+            public void onChanged(List<GitHubRepo> gitHubRepos) {
+                mGitHubSearchAdapter.updateSearchResults(gitHubRepos);
+            }
+        });
+
+        mViewModel.getLoadingStatus().observe(this, new Observer<Status>() {
+            @Override
+            public void onChanged(Status status) {
+                if (status == Status.LOADING) {
+                    mLoadingIndicatorPB.setVisibility(View.VISIBLE);
+                } else if (status == Status.SUCCESS) {
+                    mLoadingIndicatorPB.setVisibility(View.INVISIBLE);
+                    mSearchResultsRV.setVisibility(View.VISIBLE);
+                    mErrorMessageTV.setVisibility(View.INVISIBLE);
+                } else {
+                    mLoadingIndicatorPB.setVisibility(View.INVISIBLE);
+                    mSearchResultsRV.setVisibility(View.INVISIBLE);
+                    mErrorMessageTV.setVisibility(View.VISIBLE);
+                }
+            }
+        });
+
+
+//        if (savedInstanceState != null && savedInstanceState.containsKey(SEARCH_RESULTS_KEY)) {
+//            mSearchResults = (ArrayList)savedInstanceState.getSerializable(SEARCH_RESULTS_KEY);
+//            mGitHubSearchAdapter.updateSearchResults(mSearchResults);
+//        }
 
         Button searchButton = findViewById(R.id.btn_search);
         searchButton.setOnClickListener(new View.OnClickListener() {
@@ -101,14 +127,14 @@ public class MainActivity extends AppCompatActivity implements GitHubSearchAdapt
         Log.d(TAG, "onDestroy()");
     }
 
-    @Override
-    protected void onSaveInstanceState(@NonNull Bundle outState) {
-        super.onSaveInstanceState(outState);
-        Log.d(TAG, "onSaveInstanceState()");
-        if (mSearchResults != null) {
-            outState.putSerializable(SEARCH_RESULTS_KEY, mSearchResults);
-        }
-    }
+//    @Override
+//    protected void onSaveInstanceState(@NonNull Bundle outState) {
+//        super.onSaveInstanceState(outState);
+//        Log.d(TAG, "onSaveInstanceState()");
+//        if (mSearchResults != null) {
+//            outState.putSerializable(SEARCH_RESULTS_KEY, mSearchResults);
+//        }
+//    }
 
     @Override
     public void onSearchResultClicked(GitHubRepo repo) {
@@ -118,44 +144,6 @@ public class MainActivity extends AppCompatActivity implements GitHubSearchAdapt
     }
 
     private void doGitHubSearch(String searchQuery) {
-        String url = GitHubUtils.buildGitHubSearchURL(searchQuery);
-        Log.d(TAG, "querying url: " + url);
-        new GitHubSearchTask().execute(url);
-    }
-
-    public class GitHubSearchTask extends AsyncTask<String, Void, String> {
-
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-            mLoadingIndicatorPB.setVisibility(View.VISIBLE);
-        }
-
-        @Override
-        protected String doInBackground(String... strings) {
-            String url = strings[0];
-            String searchResults = null;
-            try {
-                searchResults = NetworkUtils.doHttpGet(url);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            return searchResults;
-        }
-
-        @Override
-        protected void onPostExecute(String s) {
-            super.onPostExecute(s);
-            mLoadingIndicatorPB.setVisibility(View.INVISIBLE);
-            if (s != null) {
-                mErrorMessageTV.setVisibility(View.INVISIBLE);
-                mSearchResultsRV.setVisibility(View.VISIBLE);
-                mSearchResults = GitHubUtils.parseGitHubSearchResults(s);
-                mGitHubSearchAdapter.updateSearchResults(mSearchResults);
-            } else {
-                mErrorMessageTV.setVisibility(View.VISIBLE);
-                mSearchResultsRV.setVisibility(View.INVISIBLE);
-            }
-        }
+        mViewModel.loadSearchResults(searchQuery);
     }
 }
